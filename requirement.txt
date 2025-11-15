@@ -1,0 +1,38 @@
+✅ Requirements
+
+Before running this project, make sure the following NuGet packages are installed:
+
+Entity Framework Core Packages
+
+Microsoft.EntityFrameworkCore
+
+Microsoft.EntityFrameworkCore.SqlServer
+
+Microsoft.EntityFrameworkCore.Tools
+
+Microsoft.EntityFrameworkCore.Design
+
+Swagger / OpenAPI
+
+Swashbuckle.AspNetCore
+
+⚙️ Configuration
+
+After installing the required packages, update your appsettings.json file.
+
+In the DefaultConnection, replace the Server= value with your actual SQL Server name.
+
+Example:
+"ConnectionStrings": {
+  "DefaultConnection": "Server=YOUR_SERVER_NAME;Database=StudentDB;Trusted_Connection=True;TrustServerCertificate=True;"
+}
+
+
+For example, if you are using SQL Express:
+
+"DefaultConnection": "Server=DESKTOP-1234567\\SQLEXPRESS;Database=StudentDB;Trusted_Connection=True;TrustServerCertificate=True;"
+
+
+Or if using SQL Server Developer Edition:
+
+"DefaultConnection": "Server=localhost;Database=StudentDB;Integrated Security=True;TrustServerCertificate=True;"
