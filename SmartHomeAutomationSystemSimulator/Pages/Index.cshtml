@@ -1,0 +1,690 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4 text-primary fw-bold mt-5 mb-3">
+        Welcome to <span class="text-success">Smart Home Automation System Simulator</span>
+    </h1>
+
+    <!-- Anti-forgery token for JS fetch -->
+    <form id="antiForgeryForm">
+        @Html.AntiForgeryToken()
+    </form>
+
+    <div class="mb-3 d-flex justify-content-center">
+        <table class="table-borderless" style="max-width: 600px; width: 100%;">
+            <tr>
+                <td class="align-middle" style="width: 70%; text-align: center;">
+                    <input type="text" id="deviceSearch" class="form-control" placeholder="Search by Name, Type or Location" style="border-radius: 0.25rem; border: 1px solid #ced4da;">
+                </td>
+                <td class="align-middle text-center" style="width: 30%;">
+                    <button type="button" class="btn btn-primary me-1" onclick="applySearch()">Search</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+                </td>
+            </tr>
+        </table>
+    </div>
+   <div class="mb-3 text-start">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+        Add Smart Device
+    </button>
+</div>
+
+<!-- to be modal for add data -->
+<div class="modal fade" id="addDeviceModal" tabindex="-1" aria-labelledby="addDeviceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addDeviceForm" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addDeviceModalLabel">Add Smart Device</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="addDeviceName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="addDeviceName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDeviceType" class="form-label">Type</label>
+                        <input type="text" class="form-control" id="addDeviceType" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDevicePower" class="form-label">Power Consumption (W)</label>
+                        <input type="number" class="form-control" id="addDevicePower" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDeviceLocation" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="addDeviceLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDeviceManufacturer" class="form-label">Manufacturer</label>
+                        <input type="text" class="form-control" id="addDeviceManufacturer" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDeviceInstalledDate" class="form-label">Installed Date</label>
+                        <input type="date" class="form-control" id="addDeviceInstalledDate" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Device</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    <div class="table-responsive w-100">
+        <table class="table table-striped table-hover table-bordered w-100">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Power Consumption</th>
+                    <th>Location</th>
+                    <th>Manufacturer</th>
+                    <th>Installed Date</th>
+                    <th>State</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="deviceTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <nav aria-label="Device pagination" class="mt-3">
+        <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
+</div>
+
+<!-- Device Details Modal -->
+<div class="modal fade" id="deviceModal" tabindex="-1" aria-labelledby="deviceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deviceModalLabel">Device Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="deviceModalBody">
+                <!-- Details will be injected here via JS -->
+                <div class="text-center">
+                    <span class="text-muted">Loading details...</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Device Modal -->
+<div class="modal fade" id="editDeviceModal" tabindex="-1" aria-labelledby="editDeviceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="editDeviceForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editDeviceModalLabel">Edit Device</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Hidden ID field -->
+                    <input type="hidden" id="editDeviceId">
+
+                    <div class="mb-3">
+                        <label for="editDeviceName" class="form-label">Name</label>
+                        <input type="text" id="editDeviceName" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDeviceType" class="form-label">Type</label>
+                        <input type="text" id="editDeviceType" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDevicePower" class="form-label">Power Consumption (W)</label>
+                        <input type="number" id="editDevicePower" class="form-control" required min="0">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDeviceLocation" class="form-label">Location</label>
+                        <input type="text" id="editDeviceLocation" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDeviceManufacturer" class="form-label">Manufacturer</label>
+                        <input type="text" id="editDeviceManufacturer" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editDeviceInstalledDate" class="form-label">Installed Date</label>
+                        <input type="date" id="editDeviceInstalledDate" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+<script>
+    // ============================================
+    // INITIALIZATION & GLOBAL VARIABLES
+    // ============================================
+    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    // Normalize server-side JSON for JS usage
+    const devicesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.SmartDevices.Select(d => new {
+            id = d.Id,
+            name = d.Name,
+            type = d.Type,
+            powerConsumption = d.PowerConsumption,
+            location = d.Location,
+            manufacturer = d.Manufacturer,
+            installedDate = d.InstalledDate.ToString("yyyy-MM-dd"),
+            isOn = d.IsOn
+        })
+    ));
+
+    let filteredDevices = [...devicesData];
+    const devicesPerPage = 10;
+    let currentPage = 1;
+
+    // ============================================
+    // RENDERING FUNCTIONS
+    // ============================================
+    
+    // Render table page
+    function renderTablePage(page) {
+        const start = (page - 1) * devicesPerPage;
+        const end = start + devicesPerPage;
+        const pageDevices = filteredDevices.slice(start, end);
+
+        const tbody = document.getElementById('deviceTableBody');
+        tbody.innerHTML = '';
+
+        if (pageDevices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No devices found</td></tr>';
+            renderPagination();
+            return;
+        }
+
+        pageDevices.forEach(device => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${device.id}</td>
+                <td>${device.name}</td>
+                <td>${device.type}</td>
+                <td>${device.powerConsumption} W</td>
+                <td>${device.location}</td>
+                <td>${device.manufacturer}</td>
+                <td>${device.installedDate}</td>
+                <td><span class="badge ${device.isOn ? 'bg-success' : 'bg-secondary'}">${device.isOn ? 'ON' : 'OFF'}</span></td>
+                <td>
+                   <button id="toggle-btn-${device.id}" 
+                        type="button" 
+                        class="btn btn-sm ${device.isOn ? 'btn-danger' : 'btn-success'}" 
+                        onclick="toggleDevice(${device.id})">
+                    ${device.isOn ? 'Turn Off' : 'Turn On'}
+                </button>
+
+                    <button type="button" class="btn btn-sm btn-info" onclick="getDeviceDetails(${device.id})">Details</button>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="getDeviceForEdit(${device.id})">Edit</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="deleteDevice(${device.id})">Delete</button>
+                </td>`;
+            tbody.appendChild(row);
+        });
+
+        renderPagination();
+    }
+
+    // Render pagination controls
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredDevices.length / devicesPerPage);
+        const pagination = document.getElementById('pagination');
+        
+        if (!pagination) {
+            console.error('Pagination element not found');
+            return;
+        }
+
+        pagination.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage - 1}); return false;">Previous</a>`;
+        pagination.appendChild(prevLi);
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>`;
+            pagination.appendChild(li);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${currentPage + 1}); return false;">Next</a>`;
+        pagination.appendChild(nextLi);
+    }
+
+    // Navigate to specific page
+    function goToPage(page) {
+        const totalPages = Math.ceil(filteredDevices.length / devicesPerPage);
+        
+        // Validate page number
+        if (page < 1 || page > totalPages) return;
+        
+        currentPage = page;
+        renderTablePage(currentPage);
+        
+        // Scroll to top of table
+        const tableElement = document.querySelector('.table-responsive');
+        if (tableElement) {
+            tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // ============================================
+    // DEVICE OPERATIONS
+    // ============================================
+
+    // Toggle Device State
+async function toggleDevice(id) {
+    try {
+        console.log("Toggling device with ID:", id);
+
+        // Get Anti-Forgery Token
+        const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (!tokenElement) {
+            console.error("Anti-forgery token not found!");
+            alert("Security token missing. Please refresh the page.");
+            return;
+        }
+        const token = tokenElement.value;
+
+        // Prepare form data
+        const formData = new URLSearchParams();
+        formData.append('__RequestVerificationToken', token);
+        formData.append('id', id);
+
+        // Call Toggle handler
+        const response = await fetch('?handler=Toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Server error on toggle:", errorText);
+            alert("Failed to toggle device. Server returned an error.");
+            return;
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            console.error("Toggle failed:", result.message);
+            alert(result.message || "Failed to toggle device.");
+            return;
+        }
+
+        // ✅ Immediately update local device state without waiting for full reload
+        const device = devicesData.find(d => d.id === id);
+        if (device) device.isOn = result.isOn;
+
+        const filteredDevice = filteredDevices.find(d => d.id === id);
+        if (filteredDevice) filteredDevice.isOn = result.isOn;
+
+        // ✅ Update button text and class directly for instant feedback
+        const button = document.querySelector(`#toggle-btn-${id}`);
+        if (button) {
+            button.className = `btn btn-sm ${result.isOn ? 'btn-danger' : 'btn-success'}`;
+            button.textContent = result.isOn ? 'Turn Off' : 'Turn On';
+        }
+
+        console.log("Device toggled successfully:", result);
+
+    } catch (err) {
+        console.error("Error toggling device:", err);
+        alert("An unexpected error occurred while toggling device. Please try again.");
+    }
+}
+
+    // Fetch Device Details
+    async function getDeviceDetails(id) {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('__RequestVerificationToken', token);
+            formData.append('id', id);
+
+            const response = await fetch('?handler=Details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const device = result.data;
+                const html = `
+                    <ul class="list-group">
+                        <li class="list-group-item"><strong>ID:</strong> ${device.id}</li>
+                        <li class="list-group-item"><strong>Name:</strong> ${device.name}</li>
+                        <li class="list-group-item"><strong>Type:</strong> ${device.type}</li>
+                        <li class="list-group-item"><strong>Power:</strong> ${device.powerConsumption} W</li>
+                        <li class="list-group-item"><strong>Location:</strong> ${device.location}</li>
+                        <li class="list-group-item"><strong>Manufacturer:</strong> ${device.manufacturer}</li>
+                        <li class="list-group-item"><strong>Installed Date:</strong> ${device.installedDate}</li>
+                        <li class="list-group-item"><strong>Status:</strong> <span class="badge ${device.status === 'ON' ? 'bg-success' : 'bg-secondary'}">${device.status}</span></li>
+                    </ul>
+                `;
+                document.getElementById('deviceModalBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('deviceModal')).show();
+            } else {
+                alert(result.message || 'Failed to fetch device details');
+            }
+        } catch (err) {
+            console.error('Error fetching device details:', err);
+            alert("Error fetching device details. Please try again.");
+        }
+    }
+
+    // Fetch Device Data for Editing
+    async function getDeviceForEdit(id) {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('__RequestVerificationToken', token);
+            formData.append('id', id);
+
+            const response = await fetch('?handler=Details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const device = result.data;
+                document.getElementById('editDeviceId').value = device.id;
+                document.getElementById('editDeviceName').value = device.name;
+                document.getElementById('editDeviceType').value = device.type;
+                document.getElementById('editDevicePower').value = device.powerConsumption;
+                document.getElementById('editDeviceLocation').value = device.location;
+                document.getElementById('editDeviceManufacturer').value = device.manufacturer;
+                document.getElementById('editDeviceInstalledDate').value = device.installedDate;
+
+                new bootstrap.Modal(document.getElementById('editDeviceModal')).show();
+            } else {
+                alert(result.message || 'Failed to fetch device data');
+            }
+        } catch (err) {
+            console.error('Error fetching device data for edit:', err);
+            alert("Error fetching device data. Please try again.");
+        }
+    }
+
+    // Delete Device
+    async function deleteDevice(id) {
+        if (!confirm("Are you sure you want to delete this device?")) return;
+
+        try {
+            const formData = new URLSearchParams();
+            formData.append('__RequestVerificationToken', token);
+            formData.append('id', id);
+
+            const response = await fetch('?handler=Delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Remove from local data
+                const index = devicesData.findIndex(d => d.id === id);
+                if (index > -1) {
+                    devicesData.splice(index, 1);
+                }
+                const filteredIndex = filteredDevices.findIndex(d => d.id === id);
+                if (filteredIndex > -1) {
+                    filteredDevices.splice(filteredIndex, 1);
+                }
+                
+                // Adjust current page if needed
+                const totalPages = Math.ceil(filteredDevices.length / devicesPerPage);
+                if (currentPage > totalPages && totalPages > 0) {
+                    currentPage = totalPages;
+                }
+                
+                // Re-render
+                renderTablePage(currentPage);
+                
+                // Show success message
+                alert(result.message || 'Device deleted successfully');
+            } else {
+                alert(result.message || 'Failed to delete device');
+            }
+        } catch (err) {
+            console.error('Error deleting device:', err);
+            alert("Error deleting device. Please try again.");
+        }
+    }
+
+    // ============================================
+    // SEARCH FUNCTIONS
+    // ============================================
+
+    // Apply search filter
+    async function applySearch() {
+        const query = document.getElementById('deviceSearch').value.trim();
+
+        try {
+            // Prepare form data with anti-forgery token
+            const formData = new URLSearchParams();
+            formData.append('__RequestVerificationToken', token);
+            formData.append('Query', query);
+
+            // Send POST request to Search handler
+            const response = await fetch('?handler=Search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Parse JSON safely
+            const result = await response.json();
+
+            if (result?.success) {
+                // Ensure filteredDevices is always an array
+                filteredDevices = Array.isArray(result.data) ? result.data : [];
+                currentPage = 1; // Reset to first page after search
+                renderTablePage(currentPage);
+            } else {
+                alert(result?.message || 'Search failed');
+            }
+        } catch (err) {
+            console.error('Error searching devices:', err);
+            alert('Error searching devices. Please try again.');
+        }
+    }
+
+    // Clear search and show all devices
+    async function clearSearch() {
+        document.getElementById('deviceSearch').value = '';
+        filteredDevices = [...devicesData];
+        currentPage = 1; // Reset to first page
+        renderTablePage(currentPage);
+    }
+
+    // ============================================
+    // EVENT LISTENERS & INITIALIZATION
+    // ============================================
+
+    // Allow Enter key to trigger search
+    document.getElementById('deviceSearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applySearch();
+        }
+    });
+
+    // Edit form submission handler
+    const editForm = document.getElementById('editDeviceForm');
+    if (editForm) {
+        editForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('editDeviceId').value;
+            const data = {
+                id: parseInt(id),
+                Name: document.getElementById('editDeviceName').value,
+                Type: document.getElementById('editDeviceType').value,
+                PowerConsumption: parseInt(document.getElementById('editDevicePower').value),
+                Location: document.getElementById('editDeviceLocation').value,
+                Manufacturer: document.getElementById('editDeviceManufacturer').value,
+                InstalledDate: document.getElementById('editDeviceInstalledDate').value
+            };
+
+            try {
+                const response = await fetch('?handler=Edit', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local data
+                    const device = devicesData.find(d => d.id === parseInt(id));
+                    if (device) {
+                        device.name = data.Name;
+                        device.type = data.Type;
+                        device.powerConsumption = data.PowerConsumption;
+                        device.location = data.Location;
+                        device.manufacturer = data.Manufacturer;
+                        device.installedDate = data.InstalledDate;
+                    }
+                    const filteredDevice = filteredDevices.find(d => d.id === parseInt(id));
+                    if (filteredDevice) {
+                        filteredDevice.name = data.Name;
+                        filteredDevice.type = data.Type;
+                        filteredDevice.powerConsumption = data.PowerConsumption;
+                        filteredDevice.location = data.Location;
+                        filteredDevice.manufacturer = data.Manufacturer;
+                        filteredDevice.installedDate = data.InstalledDate;
+                    }
+                    
+                    // Close modal and re-render
+                    bootstrap.Modal.getInstance(document.getElementById('editDeviceModal')).hide();
+                    renderTablePage(currentPage);
+                    alert(result.message || 'Device updated successfully');
+                } else {
+                    alert(result.message || 'Failed to update device');
+                }
+            } catch (err) {
+                console.error('Error updating device:', err);
+                alert("Error updating device. Please try again.");
+            }
+        });
+    }
+
+    // Initialize table on page load
+    renderTablePage(currentPage);
+    const addForm = document.getElementById('addDeviceForm');
+if (addForm) {
+    addForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const data = {
+            Name: document.getElementById('addDeviceName').value,
+            Type: document.getElementById('addDeviceType').value,
+            PowerConsumption: parseInt(document.getElementById('addDevicePower').value),
+            Location: document.getElementById('addDeviceLocation').value,
+            Manufacturer: document.getElementById('addDeviceManufacturer').value,
+            InstalledDate: document.getElementById('addDeviceInstalledDate').value,
+            IsOn: false
+        };
+
+        try {
+            const formData = new URLSearchParams();
+            formData.append('__RequestVerificationToken', token);
+            formData.append('Name', data.Name);
+            formData.append('Type', data.Type);
+            formData.append('PowerConsumption', data.PowerConsumption);
+            formData.append('Location', data.Location);
+            formData.append('Manufacturer', data.Manufacturer);
+            formData.append('InstalledDate', data.InstalledDate);
+            formData.append('IsOn', data.IsOn);
+
+            const response = await fetch('?handler=Add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('addDeviceModal')).hide();
+
+                // Reset form
+                addForm.reset();
+
+                // Add new device to local arrays
+                filteredDevices.push(result.data);
+                devicesData.push(result.data);
+
+                // Refresh table
+                renderTablePage(currentPage);
+                alert(result.message || 'Device added successfully');
+            } else {
+                alert(result.message || 'Failed to add device');
+            }
+        } catch (err) {
+            console.error('Error adding device:', err);
+            alert('Error adding device. Please try again.');
+        }
+    });
+}
+
+</script>
+}

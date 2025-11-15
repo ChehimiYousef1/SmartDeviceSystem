@@ -1,0 +1,12 @@
+# Ignore Visual Studio temporary files
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.db
+
+# Rider / VS Code cache
+.idea/
+.vscode/
